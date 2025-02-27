@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { ErrorType } from '../util/errorCheck';
 
 /*
     유저 정보 저장하는 스토어
@@ -13,7 +14,7 @@ interface User {
   user: { name: string; id: number; email: string; company: Company } | null;
   loading: boolean;
   error: string | null;
-  fetchUser: () => Promise<void>;
+  fetchUser: () => Promise<void | ErrorType>;
 }
 
 export const useUserStore = create<User>((set) => ({
@@ -34,6 +35,10 @@ export const useUserStore = create<User>((set) => ({
         error: error instanceof Error ? error.message : String(error),
         loading: false,
       });
+      const err: ErrorType = {
+        error: error,
+      };
+      return err;
     }
   },
 }));

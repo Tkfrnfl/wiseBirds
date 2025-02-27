@@ -11,7 +11,9 @@ import '../index.css';
 import { useUserStore } from '../store/userStore';
 import CampaignPage from './CampaignPage';
 import UserPage from './UserPage';
-
+import { ErrorType, isErrorType } from '../util/errorCheck';
+import ErrorDialog from './dialog/ErrorDialog';
+import { useErrorStore } from '../store/useErrorStore';
 /*
 메인 헤더 페이지 컴포넌트 입니다
 */
@@ -30,13 +32,21 @@ const tabs: Tab[] = [
 
 function App() {
   const { user, loading, error, fetchUser } = useUserStore();
+  const { isErr, setError, clearError } = useErrorStore();
   const [priv, setPriv] = useState<string>('어드민');
   const [onMyInfo, setMyInfo] = useState<boolean>(false);
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchUser();
+    const fetchData = async () => {
+      const result = await fetchUser();
+
+      if (isErrorType(result)) {
+        setError(result);
+      }
+    };
+    fetchData();
   }, []);
 
   // priv 변경 시 /users 페이지라면 /로 이동
@@ -52,6 +62,13 @@ function App() {
 
   const toggleMyInfo = () => {
     setMyInfo((prev) => !prev);
+  };
+  const onSubmitErr = () => {
+    clearError();
+  };
+
+  const dummyError: ErrorType = {
+    error: '',
   };
 
   return (
@@ -109,10 +126,17 @@ function App() {
       </header>
       <main>
         <Routes>
+          <Route
+            path="/"
+            element={
+              <button onClick={() => setError(dummyError)}>에러 테스트</button>
+            }
+          ></Route>
           <Route path="/campaign" element={<CampaignPage priv={priv} />} />
           <Route path="/users" element={<UserPage />} />
         </Routes>
       </main>
+      <ErrorDialog isOpen={isErr} onSubmit={onSubmitErr} />
     </>
   );
 }

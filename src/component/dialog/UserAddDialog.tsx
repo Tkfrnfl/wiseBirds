@@ -1,5 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useUserListStore } from '../../store/userListStore';
+import { isErrorType } from '../../util/errorCheck';
+import { useErrorStore } from '../../store/useErrorStore';
 
 export type UserForm = {
   username: string;
@@ -19,7 +21,7 @@ const UserAddDialog: React.FC<UserAddDialogProps> = ({
   onClose,
   onSubmit,
 }) => {
-  const { data, userAdd } = useUserListStore();
+  const { data, userAdd, userChk } = useUserListStore();
   const [formData, setFormData] = useState<UserForm>({
     username: '',
     email: '',
@@ -33,6 +35,8 @@ const UserAddDialog: React.FC<UserAddDialogProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const { setError } = useErrorStore();
+
   const togglePasswordVisibility = () => {
     setShowPassword((prev) => !prev);
   };
@@ -81,13 +85,17 @@ const UserAddDialog: React.FC<UserAddDialogProps> = ({
     []
   );
 
-  const validateIdForm = useCallback(() => {
+  const validateIdForm = useCallback(async () => {
     if (!formData.email.trim()) {
       setIdError('아이디(이메일)을 입력하세요');
       return false;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       setIdError('올바른 이메일 주소를 입력하세요');
+      return false;
+    }
+    if (await userChk(formData.email)) {
+      setIdError('이미 사용중인 이메일입니다. 다른 이메일을 입력하세요');
       return false;
     }
     setIdError(null);
@@ -102,7 +110,7 @@ const UserAddDialog: React.FC<UserAddDialogProps> = ({
     const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[\W_]).{8,15}$/;
 
     if (!passwordRegex.test(formData.password)) {
-      setPwdError('8~15자 영문, 숫자, 특수문자를 포함해야 합니다.');
+      setPwdError('8~15자 영문, 숫자, 특수문자를 사용하세요.');
       return false;
     }
 
@@ -131,7 +139,7 @@ const UserAddDialog: React.FC<UserAddDialogProps> = ({
       return false;
     }
     if (!/^[가-힣a-zA-Z]{1,16}$/.test(formData.username)) {
-      setNameError('이름을 올바르게 입력하세요. (한글 또는 영문, 1~16자)');
+      setNameError('이름을 올바르게 입력하세요. (숫자,특수문자,공백 입력불가)');
       return false;
     }
 
@@ -140,17 +148,25 @@ const UserAddDialog: React.FC<UserAddDialogProps> = ({
   }, [formData]);
 
   const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
+    async (e: React.FormEvent) => {
       e.preventDefault();
       setIsSubmitting(true);
 
-      const validId = validateIdForm();
+      const validId = await validateIdForm();
       const validPwd = validatePwdForm();
       const validConfirmPwd = validateConfirmPwdForm();
       const validName = validateNameForm();
       if (validId && validPwd && validConfirmPwd && validName) {
         onSubmit(formData);
-        userAdd(formData);
+        const fetchUserAdd = async () => {
+          const result = await userAdd(formData);
+
+          if (isErrorType(result)) {
+            setError(result);
+          }
+        };
+        fetchUserAdd();
+
         setFormData({
           username: '',
           email: '',
@@ -160,10 +176,6 @@ const UserAddDialog: React.FC<UserAddDialogProps> = ({
         onClose();
       }
       setIsSubmitting(false);
-      setIdError(null);
-      setPwdError(null);
-      setConfirmPwdError(null);
-      setNameError(null);
     },
     [formData, validateIdForm, onSubmit, onClose]
   );

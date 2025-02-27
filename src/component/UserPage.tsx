@@ -1,16 +1,29 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useUserListStore } from '../store/userListStore';
 import UserAddDialog from './dialog/UserAddDialog';
+import UserUpdateDialog from './dialog/UserUpdateDialog';
+import { isErrorType } from '../util/errorCheck';
+import { useErrorStore } from '../store/useErrorStore';
 
 const UserPage: React.FC = () => {
   const [pageNum, setPageNum] = useState<number>(1);
-  const { data, loading, error, fetchData, userAdd, userUpdate } =
-    useUserListStore();
+  const { data, fetchData } = useUserListStore();
+  const { setError } = useErrorStore();
   const [isOpenAdd, setIsOpenAdd] = useState<boolean>(false);
+  const [updateId, setUpdateId] = useState<string>('');
+  const [isOpenUpdate, setIsOpenUpdate] = useState<boolean>(false);
 
   useEffect(() => {
-    fetchData();
+    const fetchUserListData = async () => {
+      const result = await fetchData();
+
+      if (isErrorType(result)) {
+        setError(result);
+      }
+    };
+    fetchUserListData();
   }, []);
+
   const handlePrevious = () => {
     if (pageNum > 1) {
       setPageNum(pageNum - 1);
@@ -33,12 +46,24 @@ const UserPage: React.FC = () => {
   const handleIsOpen = () => {
     setIsOpenAdd(true);
   };
+  const handleIsUpdateOpen = (id: string) => {
+    setUpdateId(id);
+    setIsOpenUpdate(true);
+  };
+
   const handleIsClose = () => {
     setIsOpenAdd(false);
+  };
+  const handleIsUpdateClose = () => {
+    setIsOpenUpdate(false);
   };
   const handleIsSubmit = () => {
     setIsOpenAdd(false);
   };
+  const handleIsUpdateSubmit = () => {
+    setIsOpenUpdate(false);
+  };
+
   return (
     <div>
       <div className="font-bold mb-3">사용자 관리</div>
@@ -66,7 +91,11 @@ const UserPage: React.FC = () => {
               <td className="py-2 px-4 border-b text-right">
                 {item.last_login_at}
               </td>
-              <td className="py-2 px-4 border-b text-left">수정</td>
+              <td className="py-2 px-4 border-b text-left">
+                <button onClick={() => handleIsUpdateOpen(item.email)}>
+                  수정
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -110,6 +139,12 @@ const UserPage: React.FC = () => {
         isOpen={isOpenAdd}
         onClose={handleIsClose}
         onSubmit={handleIsSubmit}
+      />
+      <UserUpdateDialog
+        id={updateId}
+        isOpen={isOpenUpdate}
+        onClose={handleIsUpdateClose}
+        onSubmit={handleIsUpdateSubmit}
       />
     </div>
   );

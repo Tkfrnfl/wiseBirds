@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-
+import { ErrorType } from '../util/errorCheck';
 /*
     캠페인 정보 저장하는 스토어
 */
@@ -25,8 +25,8 @@ interface Campaign {
   } | null;
   loading: boolean;
   error: string | null;
-  fetchData: () => Promise<void>;
-  toggleEnabled: (index: number) => Promise<void>;
+  fetchData: () => Promise<void | ErrorType>;
+  toggleEnabled: (index: number) => Promise<void | ErrorType>;
 }
 
 export const useCampaignStore = create<Campaign>((set) => ({
@@ -46,6 +46,10 @@ export const useCampaignStore = create<Campaign>((set) => ({
         error: error instanceof Error ? error.message : String(error),
         loading: false,
       });
+      const err: ErrorType = {
+        error: error,
+      };
+      return err;
     }
   },
   toggleEnabled: async (index: number) => {
@@ -95,6 +99,10 @@ export const useCampaignStore = create<Campaign>((set) => ({
         error: error instanceof Error ? error.message : String(error),
         loading: false,
       });
+      const err: ErrorType = {
+        error: error,
+      };
+      return err;
     }
   },
 }));

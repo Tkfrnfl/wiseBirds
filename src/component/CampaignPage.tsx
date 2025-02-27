@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useCampaignStore } from '../store/campaignStore';
+import { useErrorStore } from '../store/useErrorStore';
+import { isErrorType } from '../util/errorCheck';
 
 type Prop = {
   priv: string;
@@ -8,9 +10,16 @@ type Prop = {
 const CampaignPage: React.FC<Prop> = ({ priv }) => {
   const [pageNum, setPageNum] = useState<number>(1);
   const { data, loading, error, fetchData, toggleEnabled } = useCampaignStore();
-
+  const { setError } = useErrorStore();
   useEffect(() => {
-    fetchData();
+    const fetchCampaignData = async () => {
+      const result = await fetchData();
+
+      if (isErrorType(result)) {
+        setError(result);
+      }
+    };
+    fetchCampaignData();
   }, []);
 
   const handlePrevious = () => {
@@ -32,7 +41,10 @@ const CampaignPage: React.FC<Prop> = ({ priv }) => {
 
   const handleToggle = useCallback((disabled: boolean, id: number) => {
     if (!disabled) {
-      toggleEnabled(id - 1);
+      const toggleResult = toggleEnabled(id - 1);
+      if (isErrorType(toggleResult)) {
+        setError(toggleResult);
+      }
     }
   }, []);
 

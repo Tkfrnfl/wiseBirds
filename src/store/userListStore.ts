@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { UserForm } from '../component/dialog/UserAddDialog';
+import { ErrorType } from '../util/errorCheck';
 // 유저 리스트 정보 저장하는 스토어
 type Content = {
   name: string;
@@ -17,9 +18,10 @@ interface UserList {
   } | null;
   loading: boolean;
   error: string | null;
-  fetchData: () => Promise<void>;
-  userAdd: (userForm: UserForm) => Promise<void>;
-  userUpdate: (id: number, name: string) => Promise<void>;
+  fetchData: () => Promise<void | ErrorType>;
+  userAdd: (userForm: UserForm) => Promise<void | ErrorType>;
+  userUpdate: (id: string, name: string) => Promise<void | ErrorType>;
+  userChk: (email: string) => Promise<boolean | undefined | ErrorType>;
 }
 
 export const useUserListStore = create<UserList>((set) => ({
@@ -39,6 +41,10 @@ export const useUserListStore = create<UserList>((set) => ({
         error: error instanceof Error ? error.message : String(error),
         loading: false,
       });
+      const err: ErrorType = {
+        error: error,
+      };
+      return err;
     }
   },
   userAdd: async (userForm: UserForm) => {
@@ -98,9 +104,13 @@ export const useUserListStore = create<UserList>((set) => ({
         error: error instanceof Error ? error.message : String(error),
         loading: false,
       });
+      const err: ErrorType = {
+        error: error,
+      };
+      return err;
     }
   },
-  userUpdate: async (id: number, name: string) => {
+  userUpdate: async (id: string, name: string) => {
     set({ loading: true, error: null });
 
     try {
@@ -110,10 +120,14 @@ export const useUserListStore = create<UserList>((set) => ({
       }
 
       // 유저 여부 확인
-      const userIndex = currentData.content.findIndex((user) => user.id === id);
+      const userIndex = currentData.content.findIndex(
+        (user) => user.email === id
+      );
       if (userIndex === -1) {
         throw new Error('User not found');
       }
+
+      // const userIndex = userChk()
 
       // 스토어 업데이트
       const updatedContent = [...currentData.content];
@@ -153,6 +167,47 @@ export const useUserListStore = create<UserList>((set) => ({
         error: error instanceof Error ? error.message : String(error),
         loading: false,
       });
+      const err: ErrorType = {
+        error: error,
+      };
+      return err;
+    }
+  },
+  userChk: async (email: string) => {
+    try {
+      // 서버에 GET 요청 보내기
+      // const response = await fetch(`/api/users/${email}/exists`, {
+      //   method: 'GET',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //   },
+      // });
+      // if (!response.ok) {
+      //   throw new Error('Failed to update user on server');
+      // }
+      // const serverResponse = await response.json();
+      // console.log(serverResponse);
+      let isDuplicate = false;
+      const currentData = useUserListStore.getState().data;
+      if (currentData?.content) {
+        for (let i = 0; i < currentData?.content.length; i++) {
+          if (currentData?.content[i].email === email) {
+            isDuplicate = true;
+            return isDuplicate;
+          }
+        }
+      }
+
+      return isDuplicate;
+    } catch (error: unknown) {
+      set({
+        error: error instanceof Error ? error.message : String(error),
+        loading: false,
+      });
+      const err: ErrorType = {
+        error: error,
+      };
+      return err;
     }
   },
 }));
