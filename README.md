@@ -17,7 +17,7 @@
    ```bash
    npm install
 2. 개발서버 실행
-3. ```bash
+   ```bash
    npm start
 
 ## 프로젝트 디렉토리 구조
